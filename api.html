@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width" />
+  <title>Pokémon List</title>
+  <link href="api.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+  <div id="content">
+    <h1>Pokémon List</h1>
+    <div id="pokemon-list" class="pokemon-list"></div>
+    <div id="pagination" class="pagination"></div>
+    <div class="loading-spinner" id="loading-spinner" ></div>
+  </div>
+
+  <script>
+    const limit = 20;
+    let totalPokemons = 0;
+    let totalPages = 0;
+    let currentPage = 1;
+
+    function fetchTotalPokemons() {
+      showLoadingSpinner();
+      fetch('https://pokeapi.co/api/v2/pokemon?offset=0&limit=5')
+        .then(response => response.json())
+        .then(data => {
+          totalPokemons = data.count;
+          totalPages = Math.ceil(totalPokemons / limit);
+          renderPagination();
+          fetchPokemons(currentPage);
+        })
+        .catch(error => {
+          console.error('Error fetching total Pokémons:', error);
+          document.getElementById('pokemon-list').innerHTML = `<p>Error: ${error.message}</p>`;
+        })
+        .finally(hideLoadingSpinner);
+    }
+
+    function fetchPokemons(page) {
+      const offset = (page - 1) * limit;
+      showLoadingSpinner();
+      fetch(`https://pokeapi.co/api/v2/pokemon?offset=${offset}&limit=${limit}`)
+        .then(response => response.json())
+        .then(data => {
+          const pokemonListDiv = document.getElementById('pokemon-list');
+          const pokemonList = data.results.map(pokemon => 
+            `<li>${pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1)}</li>`
+          ).join('');
+          pokemonListDiv.innerHTML = `<ul>${pokemonList}</ul>`;
+        })
+        .catch(error => {
+          console.error('Error fetching Pokémons:', error);
+          document.getElementById('pokemon-list').innerHTML = `<p>Error: ${error.message}</p>`;
+        })
+        .finally(hideLoadingSpinner);
+    }
+
+    function renderPagination() {
+      const paginationDiv = document.getElementById('pagination');
+      paginationDiv.innerHTML = '';
+
+      // Previous button
+      const prevButton = document.createElement('button');
+      prevButton.textContent = 'Previous';
+      prevButton.disabled = currentPage === 1;
+      prevButton.addEventListener('click', () => {
+        if (currentPage > 1) {
+          currentPage--;
+          fetchPokemons(currentPage);
+          renderPagination();
+        }
+      });
+      paginationDiv.appendChild(prevButton);
+
+      // Page buttons
+      for (let i = 1; i <= totalPages; i++) {
+        if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+          const button = document.createElement('button');
+          button.textContent = i;
+          button.className = i === currentPage ? 'current' : '';
+          button.addEventListener('click', () => {
+            if (i !== currentPage) {
+              currentPage = i;
+              fetchPokemons(currentPage);
+              renderPagination();
+            }
+          });
+          paginationDiv.appendChild(button);
+        } else if (i === currentPage - 3 || i === currentPage + 3) {
+          const ellipsis = document.createElement('span');
+          ellipsis.textContent = '...';
+          ellipsis.className = 'ellipsis';
+          paginationDiv.appendChild(ellipsis);
+        }
+      }
+
+      // Next button
+      const nextButton = document.createElement('button');
+      nextButton.textContent = 'Next';
+      nextButton.disabled = currentPage === totalPages;
+      nextButton.addEventListener('click', () => {
+        if (currentPage < totalPages) {
+          currentPage++;
+          fetchPokemons(currentPage);
+          renderPagination();
+        }
+      });
+      paginationDiv.appendChild(nextButton);
+    }
+
+    function showLoadingSpinner() {
+      document.getElementById('loading-spinner').style.display = 'block';
+    }
+
+    function hideLoadingSpinner() {
+      document.getElementById('loading-spinner').style.display = 'none';
+    }
+
+    fetchTotalPokemons();
+
+    function searchPokemon() {
+      // Get the input value
+      const searchInput = document.getElementById("searchInput").value.toLowerCase();
+      
+      // Show the loading spinner
+      showLoadingSpinner();
+    
+      // Fetch all Pokémon names from the API
+      fetch(`https://pokeapi.co/api/v2/pokemon?limit=10000`)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok ' + response.statusText);
+          }
+          return response.json();
+        })
+        .then(data => {
+          // Filter Pokémon names based on the search input
+          const filteredPokemons = data.results.filter(pokemon => 
+            pokemon.name.toLowerCase().includes(searchInput)
+          );
+    
+          // Select the div for the Pokémon list
+          const pokemonListDiv = document.getElementById('pokemon-list');
+    
+          // Generate HTML for the filtered Pokémon list
+          const pokemonList = filteredPokemons.map(pokemon => 
+            `<li>${pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1)}</li>`
+          ).join('');
+          
+          // Update the inner HTML of the div to display the filtered Pokémon
+          pokemonListDiv.innerHTML = `<ul>${pokemonList}</ul>`;
+        })
+        .catch(error => {
+          console.error('Error fetching Pokémon:', error);
+          document.getElementById('pokemon-list').innerHTML = `<p>Error: ${error.message}</p>`;
+        })
+        .finally(hideLoadingSpinner);
+    }
+    
+
+
+
+
+  </script>
+</body>
+</html>
